@@ -1,69 +1,73 @@
-package com.example.pc.workwithanton;
+package com.example.pc.myapplication;
 
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.ListView;
+import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 
-import java.util.Vector;
-
-
 public class MainActivity extends AppCompatActivity {
+    ListView lv;
+    SimpleCursorAdapter adapter;
+    TextView textView_pr, textView_cost, textView_result;
+    SQLiteDatabase productsDB;
 
-    String[] movies;
-    boolean[] used;
-    int sum = 0;
-    TextView films;
-    int i = 0;
-
+    private int sumcost(Cursor cursor)
+    {
+        int result = 0;
+        if (cursor.moveToFirst()) {
+            do {
+                result += cursor.getInt(2);
+                Log.d("tritritri", String.valueOf(result));
+            } while (cursor.moveToNext());
+        }
+        return result;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        movies = getResources().getStringArray(R.array.Films);
-        films=findViewById(R.id.film_title);
-        used = new boolean[movies.length];
-        Log.d("mytag", "function inCreate called");
+        lv = findViewById(R.id.shop_list);
+        textView_pr = findViewById(R.id.product);
+        textView_cost = findViewById(R.id.cost);
+        textView_result = findViewById(R.id.result);
+        DBHelper helper = new DBHelper(this);
+        productsDB = helper.getWritableDatabase();
+
+        Cursor products = productsDB.rawQuery("SELECT * FROM shopping_list", null);
+        textView_result.setText("All: " + String.valueOf(sumcost(products)));
+
+        String[] product_fields = products.getColumnNames();
+
+        int[] views = { R.id.id, R.id.product, R.id.cost};
+
+        adapter = new SimpleCursorAdapter(this, R.layout.product, products, product_fields, views, 0);
+        lv.setAdapter(adapter);
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d("mytag", "function inResume called");
-    }
-
-
-    public void onClick(View view)
-    {
-        if (sum == movies.length && view.getId() != R.id.drop)
+    public void onClick(View v) {
+        if (v.getId() == R.id.add)
         {
-            films.setText("Все фильмы просмотрены");
-            return;
-        }
+            String insertprod = textView_pr.getText().toString();
+            Integer price = Integer.parseInt(textView_cost.getText().toString());
+            if (insertprod != null && price != null) {
+                productsDB.execSQL("INSERT INTO shopping_list (`product`, `cost`) VALUES ('" + insertprod + "', " + price + ");");
+//                adapter.notifyDataSetChanged();
+                Cursor products = productsDB.rawQuery("SELECT * FROM shopping_list", null);
+                textView_result.setText("All: " + String.valueOf(sumcost(products)));
+                String[] product_fields = products.getColumnNames();
 
-        if (view.getId() == R.id.rand)
-        {
-            i = (int)(Math.random() * movies.length);
-            while (used[i])
-            {
-                i = (int)(Math.random() * movies.length);
+                int[] views = {R.id.id, R.id.product, R.id.cost};
+
+                adapter = new SimpleCursorAdapter(this, R.layout.product, products, product_fields, views, 0);
+                lv.setAdapter(adapter);
             }
-            used[i] = true;
-            sum++;
-
-            films.setText(movies[i]);
-        }
-
-        if (view.getId() == R.id.drop)
-        {
-            films.setText("Выберите фильм");
-            for (int i = 0;i < movies.length;i++)
-            {
-                used[i] = false;
-            }
-            sum = 0;
         }
     }
+
 }
